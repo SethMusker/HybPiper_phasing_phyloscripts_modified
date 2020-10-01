@@ -1,0 +1,56 @@
+
+cd /scratch/mskset001/Mike_files_imbricata/trimmed/alleles_workflow/renamed_genes/Combined/exons_introns_to_combine
+cd exons_checked
+ls | awk -F_ '{print $1}' > ../exons_all_checked
+cd ../introns_checked
+ls | awk -F[\.] '{print $4}' > ../introns_all_checked
+
+# https://stackoverflow.com/questions/18204904/fast-way-of-finding-lines-in-one-file-that-are-not-in-another
+cd ..
+sort exons_all_checked > exons_all_checked_sorted
+sort introns_all_checked > introns_all_checked_sorted
+
+comm -12 exons_all_checked introns_all_checked > exons_with_introns
+
+int4 
+source activate biopython_2.7
+
+while read name;do
+echo $name
+python ~/HybPiper/phyloscripts/alleles_workflow/combine_alignments.py exons_checked/"$name"* introns_checked/*"$name"* $name
+done < exons_with_introns
+
+mkdir combined_exons_introns
+mv *combined* combined_exons_introns
+cd combined_exons_introns
+ls | awk -F[\.] '{print $1}' |sort -u > exons_with_introns_iqtree
+
+## make trees with IQtree
+
+conda deactivate
+cd /scratch/mskset001/Mike_files_imbricata/trimmed/alleles_workflow/renamed_genes/Combined/exons_introns_to_combine/combined_exons_introns
+
+## fit separate models to each partition. Extended model search plus LieMarkov models.
+## keep searching likelihood space for longer (-nstop 500; default 100) (http://www.iqtree.org/doc/Command-Reference#tree-search-parameters)
+## 1000 ultrafast boots (for collapsing nodes later)
+parallel "~/iqtree-2.0.6-Linux/bin/iqtree2 -T 1 -s {}.combined.fasta -p {}.combined.partition -m MFP+LM -nstop 500 -B 1000" :::: exons_with_introns_iqtree
+
+cd /scratch/mskset001/Mike_files_imbricata/trimmed/alleles_workflow/renamed_genes/Combined/exons_introns_to_combine/combined_exons_introns
+~/iqtree-2.0.6-Linux/bin/iqtree2 -T 1 -s Erica9237.combined.fasta -p Erica9237.combined.partition -m MFP+LM -nstop 500 -B 1000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
